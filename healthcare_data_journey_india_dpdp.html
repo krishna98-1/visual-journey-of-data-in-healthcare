@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: transparent; font-family: "Anthropic Sans", sans-serif; }
+
+.chart-wrap {
+  width: 100%;
+  overflow-x: auto;
+  padding: 0 0 24px 0;
+}
+
+svg {
+  display: block;
+  min-width: 1100px;
+}
+
+/* Node styles */
+.node-hospital { fill: #EEEDFE; stroke: #534AB7; stroke-width: 0.8; }
+.node-hospital text { fill: #3C3489; }
+.node-lab { fill: #E1F5EE; stroke: #0F6E56; stroke-width: 0.8; }
+.node-lab text { fill: #085041; }
+.node-research { fill: #FAEEDA; stroke: #854F0B; stroke-width: 0.8; }
+.node-research text { fill: #633806; }
+.node-insurance { fill: #E6F1FB; stroke: #185FA5; stroke-width: 0.8; }
+.node-insurance text { fill: #0C447C; }
+.node-pharma { fill: #FBEAF0; stroke: #993556; stroke-width: 0.8; }
+.node-pharma text { fill: #72243E; }
+.node-cloud { fill: #F1EFE8; stroke: #5F5E5A; stroke-width: 0.8; }
+.node-cloud text { fill: #444441; }
+.node-device { fill: #EAF3DE; stroke: #3B6D11; stroke-width: 0.8; }
+.node-device text { fill: #27500A; }
+.node-patient { fill: #FCEBEB; stroke: #A32D2D; stroke-width: 1.2; }
+.node-patient text { fill: #501313; }
+.node-death { fill: #2C2C2A; stroke: #444441; stroke-width: 0.8; }
+.node-death text { fill: #D3D1C7; }
+.node-consent { fill: #FAECE7; stroke: #993C1D; stroke-width: 0.8; }
+.node-consent text { fill: #4A1B0C; }
+.node-breach { fill: #FCE0E0; stroke: #E24B4A; stroke-width: 1; }
+.node-breach text { fill: #501313; }
+
+.section-label { font-size: 10px; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; }
+
+/* Arrow styles */
+.arr-main { stroke: #888780; stroke-width: 1.2; fill: none; }
+.arr-consent { stroke: #D85A30; stroke-width: 1; fill: none; stroke-dasharray: 5,3; }
+.arr-extract { stroke: #185FA5; stroke-width: 1; fill: none; stroke-dasharray: 3,3; }
+.arr-risk { stroke: #E24B4A; stroke-width: 1.2; fill: none; }
+.arr-cloud { stroke: #5F5E5A; stroke-width: 0.8; fill: none; stroke-dasharray: 4,2; }
+
+text.title { font-size: 13px; font-weight: 500; fill: var(--color-text-primary, #1a1a1a); }
+text.sub { font-size: 10px; fill: var(--color-text-secondary, #5a5a5a); }
+text.micro { font-size: 9px; fill: var(--color-text-secondary, #5a5a5a); }
+text.bold11 { font-size: 11px; font-weight: 500; }
+text.bold10 { font-size: 10px; font-weight: 500; }
+
+.lane-bg-hosp { fill: #EEEDFE; fill-opacity: 0.15; }
+.lane-bg-lab { fill: #E1F5EE; fill-opacity: 0.15; }
+.lane-bg-research { fill: #FAEEDA; fill-opacity: 0.15; }
+.lane-bg-insure { fill: #E6F1FB; fill-opacity: 0.15; }
+.lane-bg-pharma { fill: #FBEAF0; fill-opacity: 0.15; }
+.lane-bg-cloud { fill: #F1EFE8; fill-opacity: 0.2; }
+
+.zone-label { font-size: 9px; font-weight: 500; fill: #888780; letter-spacing: 0.4px; }
+</style>
+</head>
+<body>
+<div class="chart-wrap">
+<svg viewBox="0 0 1700 2900" width="100%" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+  <marker id="arr-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#E24B4A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+  <marker id="arr-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#185FA5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+  <marker id="arr-orange" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#D85A30" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+  <marker id="arr-gray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+</defs>
+
+<!-- ============================================================
+     TITLE BLOCK
+     ============================================================ -->
+<rect x="40" y="20" width="1620" height="60" rx="8" fill="#2C2C2A"/>
+<text x="860" y="44" text-anchor="middle" font-size="16" font-weight="500" fill="#D3D1C7">Healthcare Data Lifecycle &amp; Risk Map — India (DPDP 2023 · HIPAA · GDPR EU)</text>
+<text x="860" y="64" text-anchor="middle" font-size="10" fill="#888780">Patient data origin → collection → transmission → storage → processing → sharing → extraction → archival / destruction</text>
+
+<!-- ============================================================
+     LEGEND
+     ============================================================ -->
+<rect x="40" y="96" width="1620" height="54" rx="6" fill="#F1EFE8" fill-opacity="0.4" stroke="#B4B2A9" stroke-width="0.5"/>
+<text x="60" y="113" class="zone-label">LEGEND — DATA FLOW TYPES</text>
+
+<!-- Legend items -->
+<line x1="60" y1="132" x2="100" y2="132" stroke="#888780" stroke-width="1.5" marker-end="url(#arr-gray)"/>
+<text x="108" y="136" class="micro">Primary clinical data flow</text>
+
+<line x1="240" y1="132" x2="280" y2="132" stroke="#D85A30" stroke-width="1.2" stroke-dasharray="5,3" marker-end="url(#arr-orange)"/>
+<text x="288" y="136" class="micro">Consent / authorisation flow</text>
+
+<line x1="440" y1="132" x2="480" y2="132" stroke="#185FA5" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#arr-blue)"/>
+<text x="488" y="136" class="micro">Data extraction / analytics</text>
+
+<line x1="640" y1="132" x2="680" y2="132" stroke="#E24B4A" stroke-width="1.5" marker-end="url(#arr-red)"/>
+<text x="688" y="136" class="micro">Breach / risk path</text>
+
+<line x1="840" y1="132" x2="880" y2="132" stroke="#5F5E5A" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arr)"/>
+<text x="888" y="136" class="micro">Cloud / SaaS sync</text>
+
+<rect x="1060" y="124" width="10" height="10" rx="2" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.8"/>
+<text x="1076" y="133" class="micro">Hospital</text>
+<rect x="1140" y="124" width="10" height="10" rx="2" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.8"/>
+<text x="1156" y="133" class="micro">Diagnostics lab</text>
+<rect x="1260" y="124" width="10" height="10" rx="2" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.8"/>
+<text x="1276" y="133" class="micro">Research</text>
+<rect x="1360" y="124" width="10" height="10" rx="2" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.8"/>
+<text x="1376" y="133" class="micro">Insurance</text>
+<rect x="1460" y="124" width="10" height="10" rx="2" fill="#FBEAF0" stroke="#993556" stroke-width="0.8"/>
+<text x="1476" y="133" class="micro">Pharmacy</text>
+<rect x="1560" y="124" width="10" height="10" rx="2" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.8"/>
+<text x="1576" y="133" class="micro">Cloud / SaaS</text>
+
+<!-- ============================================================
+     PHASE 1: DATA BIRTH — PATIENT ENTRY
+     ============================================================ -->
+<rect x="40" y="168" width="1620" height="24" rx="4" fill="#2C2C2A"/>
+<text x="860" y="184" text-anchor="middle" font-size="11" font-weight="500" fill="#D3D1C7">PHASE 1 — DATA BIRTH: HOW PATIENT DATA IS CREATED</text>
+
+<!-- Patient box -->
+<rect x="700" y="208" width="300" height="64" rx="8" class="node-patient"/>
+<text x="850" y="228" text-anchor="middle" class="title" fill="#501313">Patient / Data Principal</text>
+<text x="850" y="244" text-anchor="middle" class="sub" fill="#791F1F">Real person entering the health system</text>
+<text x="850" y="260" text-anchor="middle" class="micro" fill="#791F1F">DPDP §3 — Data Principal; GDPR Art.4(1) — Data Subject</text>
+
+<!-- Data birth sources row -->
+<!-- Source 1: Walk-in -->
+<rect x="60" y="320" width="190" height="100" rx="6" class="node-hospital"/>
+<text x="155" y="341" text-anchor="middle" class="bold11" fill="#3C3489">Walk-in registration</text>
+<text x="155" y="357" text-anchor="middle" class="micro" fill="#534AB7">Hospital front desk / OPD</text>
+<text x="155" y="370" text-anchor="middle" class="micro" fill="#534AB7">Name · DOB · Address</text>
+<text x="155" y="383" text-anchor="middle" class="micro" fill="#534AB7">Aadhar / PAN (optional)</text>
+<text x="155" y="396" text-anchor="middle" class="micro" fill="#534AB7">Chief complaint · Insurance ID</text>
+<text x="155" y="409" text-anchor="middle" class="micro" fill="#534AB7">Data born: Paper + Digital form</text>
+
+<!-- Source 2: Emergency -->
+<rect x="270" y="320" width="190" height="100" rx="6" class="node-hospital"/>
+<text x="365" y="341" text-anchor="middle" class="bold11" fill="#3C3489">Emergency admission</text>
+<text x="365" y="357" text-anchor="middle" class="micro" fill="#534AB7">A&amp;E / Casualty dept</text>
+<text x="365" y="370" text-anchor="middle" class="micro" fill="#534AB7">Vital signs captured immediately</text>
+<text x="365" y="383" text-anchor="middle" class="micro" fill="#534AB7">Next-of-kin contact gathered</text>
+<text x="365" y="396" text-anchor="middle" class="micro" fill="#534AB7">Implied consent for treatment</text>
+<text x="365" y="409" text-anchor="middle" class="micro" fill="#534AB7">Data born: Verbal + Device</text>
+
+<!-- Source 3: Telemedicine -->
+<rect x="480" y="320" width="190" height="100" rx="6" class="node-hospital"/>
+<text x="575" y="341" text-anchor="middle" class="bold11" fill="#3C3489">Telemedicine / app</text>
+<text x="575" y="357" text-anchor="middle" class="micro" fill="#534AB7">Doctor-on-call / e-Sanjeevani</text>
+<text x="575" y="370" text-anchor="middle" class="micro" fill="#534AB7">Video session metadata</text>
+<text x="575" y="383" text-anchor="middle" class="micro" fill="#534AB7">Chat + prescription logs</text>
+<text x="575" y="396" text-anchor="middle" class="micro" fill="#534AB7">IP address, device ID captured</text>
+<text x="575" y="409" text-anchor="middle" class="micro" fill="#534AB7">Data born: Cloud SaaS platform</text>
+
+<!-- Source 4: Medical device -->
+<rect x="690" y="320" width="190" height="100" rx="6" class="node-device"/>
+<text x="785" y="341" text-anchor="middle" class="bold11" fill="#27500A">Medical device / IoT</text>
+<text x="785" y="357" text-anchor="middle" class="micro" fill="#3B6D11">ECG · EEG · Pulse Ox</text>
+<text x="785" y="370" text-anchor="middle" class="micro" fill="#3B6D11">Glucose monitor · BP cuff</text>
+<text x="785" y="383" text-anchor="middle" class="micro" fill="#3B6D11">Wearable (Apple Watch etc.)</text>
+<text x="785" y="396" text-anchor="middle" class="micro" fill="#3B6D11">Implanted device (pacemaker)</text>
+<text x="785" y="409" text-anchor="middle" class="micro" fill="#3B6D11">Data born: Sensor stream (HL7/FHIR)</text>
+
+<!-- Source 5: Imaging -->
+<rect x="900" y="320" width="190" height="100" rx="6" class="node-device"/>
+<text x="995" y="341" text-anchor="middle" class="bold11" fill="#27500A">Diagnostic imaging</text>
+<text x="995" y="357" text-anchor="middle" class="micro" fill="#3B6D11">X-Ray · CT · MRI · Ultrasound</text>
+<text x="995" y="370" text-anchor="middle" class="micro" fill="#3B6D11">DICOM file generated</text>
+<text x="995" y="383" text-anchor="middle" class="micro" fill="#3B6D11">Embedded patient metadata</text>
+<text x="995" y="396" text-anchor="middle" class="micro" fill="#3B6D11">PACS system stores locally</text>
+<text x="995" y="409" text-anchor="middle" class="micro" fill="#3B6D11">Data born: DICOM standard</text>
+
+<!-- Source 6: Lab sample -->
+<rect x="1110" y="320" width="190" height="100" rx="6" class="node-lab"/>
+<text x="1205" y="341" text-anchor="middle" class="bold11" fill="#085041">Lab sample collection</text>
+<text x="1205" y="357" text-anchor="middle" class="micro" fill="#0F6E56">Blood · Urine · Tissue</text>
+<text x="1205" y="370" text-anchor="middle" class="micro" fill="#0F6E56">Barcode linked to patient ID</text>
+<text x="1205" y="383" text-anchor="middle" class="micro" fill="#0F6E56">Chain-of-custody log starts</text>
+<text x="1205" y="396" text-anchor="middle" class="micro" fill="#0F6E56">LIS system creates record</text>
+<text x="1205" y="409" text-anchor="middle" class="micro" fill="#0F6E56">Data born: LIS / LIMS barcode</text>
+
+<!-- Source 7: Pharmacy -->
+<rect x="1320" y="320" width="190" height="100" rx="6" class="node-pharma"/>
+<text x="1415" y="341" text-anchor="middle" class="bold11" fill="#72243E">Prescription intake</text>
+<text x="1415" y="357" text-anchor="middle" class="micro" fill="#993556">Paper Rx or e-Prescription</text>
+<text x="1415" y="370" text-anchor="middle" class="micro" fill="#993556">Drug name · dosage · duration</text>
+<text x="1415" y="383" text-anchor="middle" class="micro" fill="#993556">Patient ID cross-linked</text>
+<text x="1415" y="396" text-anchor="middle" class="micro" fill="#993556">Dispensing record created</text>
+<text x="1415" y="409" text-anchor="middle" class="micro" fill="#993556">Data born: Pharmacy POS / ERP</text>
+
+<!-- Source 8: Insurance -->
+<rect x="1530" y="320" width="190" height="100" rx="6" class="node-insurance"/>
+<text x="1625" y="341" text-anchor="middle" class="bold11" fill="#0C447C">Insurance enrolment</text>
+<text x="1625" y="357" text-anchor="middle" class="micro" fill="#185FA5">Policy application form</text>
+<text x="1625" y="370" text-anchor="middle" class="micro" fill="#185FA5">Pre-existing condition declared</text>
+<text x="1625" y="383" text-anchor="middle" class="micro" fill="#185FA5">Medical history submitted</text>
+<text x="1625" y="396" text-anchor="middle" class="micro" fill="#185FA5">Actuarial risk scored</text>
+<text x="1625" y="409" text-anchor="middle" class="micro" fill="#185FA5">Data born: Insurer CRM / portal</text>
+
+<!-- Arrows from patient to sources -->
+<line x1="770" y1="272" x2="250" y2="320" stroke="#888780" stroke-width="1" marker-end="url(#arr-gray)"/>
+<line x1="790" y1="272" x2="400" y2="320" stroke="#888780" stroke-width="1" marker-end="url(#arr-gray)"/>
+<line x1="810" y1="272" x2="575" y2="320" stroke="#888780" stroke-width="1" marker-end="url(#arr-gray)"/>
+<line x1="830" y1="272" x2="785" y2="320" stroke="#888780" stroke-width="1" marker-end="url(#arr-gray)"/>
+<line x1="870" y1="272" x2="995" y2="320" stroke="#888780" stroke-width="1" marker-end="url(#arr-gray)"/>
+<line x1="900" y1="272" x2="1170" y2="320" stroke="#888780" stroke-width="1" marker-end="url(#arr-gray)"/>
+<line x1="940" y1="272" x2="1380" y2="320" stroke="#888780" stroke-width="1" marker-end="url(#arr-gray)"/>
+<line x1="990" y1="272" x2="1590" y2="320" stroke="#888780" stroke-width="1" marker-end="url(#arr-gray)"/>
+
+<!-- ============================================================
+     PHASE 2: CONSENT LAYER
+     ============================================================ -->
+<rect x="40" y="436" width="1620" height="24" rx="4" fill="#993C1D"/>
+<text x="860" y="452" text-anchor="middle" font-size="11" font-weight="500" fill="#FAECE7">PHASE 2 — CONSENT &amp; LEGAL BASIS (DPDP §6 · GDPR Art.6/9 · HIPAA §164.508)</text>
+
+<!-- Consent nodes -->
+<rect x="60" y="472" width="220" height="90" rx="6" class="node-consent"/>
+<text x="170" y="491" text-anchor="middle" class="bold11" fill="#4A1B0C">Explicit written consent</text>
+<text x="170" y="506" text-anchor="middle" class="micro" fill="#993C1D">DPDP §6 — must be free, specific</text>
+<text x="170" y="519" text-anchor="middle" class="micro" fill="#993C1D">informed and unambiguous</text>
+<text x="170" y="532" text-anchor="middle" class="micro" fill="#993C1D">Consent manager registry entry</text>
+<text x="170" y="545" text-anchor="middle" class="micro" fill="#993C1D">Revocable at any time</text>
+<text x="170" y="558" text-anchor="middle" class="micro" fill="#993C1D">GDPR Art.9 — Special category data</text>
+
+<rect x="300" y="472" width="220" height="90" rx="6" class="node-consent"/>
+<text x="410" y="491" text-anchor="middle" class="bold11" fill="#4A1B0C">Implied / treatment consent</text>
+<text x="410" y="506" text-anchor="middle" class="micro" fill="#993C1D">Emergency &amp; acute care exception</text>
+<text x="410" y="519" text-anchor="middle" class="micro" fill="#993C1D">DPDP §7 — Legitimate use</text>
+<text x="410" y="532" text-anchor="middle" class="micro" fill="#993C1D">Not for secondary purposes</text>
+<text x="410" y="545" text-anchor="middle" class="micro" fill="#993C1D">HIPAA Treatment/Payment/Ops</text>
+<text x="410" y="558" text-anchor="middle" class="micro" fill="#993C1D">TPO exception applies</text>
+
+<rect x="540" y="472" width="220" height="90" rx="6" class="node-consent"/>
+<text x="650" y="491" text-anchor="middle" class="bold11" fill="#4A1B0C">Research consent waiver</text>
+<text x="650" y="506" text-anchor="middle" class="micro" fill="#993C1D">Ethics board / IRB approval req.</text>
+<text x="650" y="519" text-anchor="middle" class="micro" fill="#993C1D">Anonymisation mandatory</text>
+<text x="650" y="532" text-anchor="middle" class="micro" fill="#993C1D">DPDP Schedule — research exempt</text>
+<text x="650" y="545" text-anchor="middle" class="micro" fill="#993C1D">GDPR Art.89 — Research derogation</text>
+<text x="650" y="558" text-anchor="middle" class="micro" fill="#993C1D">ICMR Bioethics Guidelines 2023</text>
+
+<rect x="780" y="472" width="220" height="90" rx="6" class="node-consent"/>
+<text x="890" y="491" text-anchor="middle" class="bold11" fill="#4A1B0C">Statutory disclosure</text>
+<text x="890" y="506" text-anchor="middle" class="micro" fill="#993C1D">Court order / law enforcement</text>
+<text x="890" y="519" text-anchor="middle" class="micro" fill="#993C1D">Notifiable disease reporting</text>
+<text x="890" y="532" text-anchor="middle" class="micro" fill="#993C1D">DPDP §17 — State exemptions</text>
+<text x="890" y="545" text-anchor="middle" class="micro" fill="#993C1D">IT Act §69 — Surveillance order</text>
+<text x="890" y="558" text-anchor="middle" class="micro" fill="#993C1D">No patient consent required</text>
+
+<rect x="1020" y="472" width="220" height="90" rx="6" class="node-consent"/>
+<text x="1130" y="491" text-anchor="middle" class="bold11" fill="#4A1B0C">Insurance / TPA authorisation</text>
+<text x="1130" y="506" text-anchor="middle" class="micro" fill="#993C1D">Policy T&amp;C embed consent</text>
+<text x="1130" y="519" text-anchor="middle" class="micro" fill="#993C1D">Pre-auth for procedures</text>
+<text x="1130" y="532" text-anchor="middle" class="micro" fill="#993C1D">IRDAI 2024 Health Data Circular</text>
+<text x="1130" y="545" text-anchor="middle" class="micro" fill="#993C1D">Claim adjudication access</text>
+<text x="1130" y="558" text-anchor="middle" class="micro" fill="#993C1D">Patient right to restrict</text>
+
+<rect x="1260" y="472" width="220" height="90" rx="6" class="node-consent"/>
+<text x="1370" y="491" text-anchor="middle" class="bold11" fill="#4A1B0C">Pharmacy dispensing consent</text>
+<text x="1370" y="506" text-anchor="middle" class="micro" fill="#993C1D">Prescription = legal basis</text>
+<text x="1370" y="519" text-anchor="middle" class="micro" fill="#993C1D">OTC — implied consent only</text>
+<text x="1370" y="532" text-anchor="middle" class="micro" fill="#993C1D">CDSCO Drug Rules 1945 apply</text>
+<text x="1370" y="545" text-anchor="middle" class="micro" fill="#993C1D">Pharmacovigilance exception</text>
+<text x="1370" y="558" text-anchor="middle" class="micro" fill="#993C1D">3rd party share requires consent</text>
+
+<rect x="1500" y="472" width="160" height="90" rx="6" class="node-consent"/>
+<text x="1580" y="491" text-anchor="middle" class="bold11" fill="#4A1B0C">Consent withdrawal</text>
+<text x="1580" y="506" text-anchor="middle" class="micro" fill="#993C1D">DPDP §13 — Right to withdraw</text>
+<text x="1580" y="519" text-anchor="middle" class="micro" fill="#993C1D">Erasure request follows</text>
+<text x="1580" y="532" text-anchor="middle" class="micro" fill="#993C1D">Fiduciary must cease use</text>
+<text x="1580" y="545" text-anchor="middle" class="micro" fill="#993C1D">Retention schedule applies</text>
+<text x="1580" y="558" text-anchor="middle" class="micro" fill="#993C1D">GDPR Art.17 Right to erasure</text>
+
+<!-- ============================================================
+     PHASE 3: HOSPITAL DATA ECOSYSTEM
+     ============================================================ -->
+<rect x="40" y="580" width="1620" height="24" rx="4" fill="#534AB7"/>
+<text x="860" y="596" text-anchor="middle" font-size="11" font-weight="500" fill="#EEEDFE">PHASE 3 — HOSPITAL DATA ECOSYSTEM (Data Fiduciary #1)</text>
+
+<!-- Hospital internal systems -->
+<rect x="60" y="616" width="380" height="140" rx="6" fill="#EEEDFE" fill-opacity="0.3" stroke="#534AB7" stroke-width="0.5" stroke-dasharray="4,2"/>
+<text x="250" y="634" text-anchor="middle" class="bold10" fill="#3C3489">CLINICAL SYSTEMS</text>
+
+<rect x="70" y="644" width="170" height="70" rx="5" class="node-hospital"/>
+<text x="155" y="662" text-anchor="middle" class="bold10" fill="#3C3489">EMR / EHR System</text>
+<text x="155" y="676" text-anchor="middle" class="micro" fill="#534AB7">SOAP notes · diagnoses</text>
+<text x="155" y="689" text-anchor="middle" class="micro" fill="#534AB7">ICD-10 / SNOMED codes</text>
+<text x="155" y="702" text-anchor="middle" class="micro" fill="#534AB7">Medication orders (CPOE)</text>
+
+<rect x="250" y="644" width="180" height="70" rx="5" class="node-hospital"/>
+<text x="340" y="662" text-anchor="middle" class="bold10" fill="#3C3489">HIS / RIS / LIS</text>
+<text x="340" y="676" text-anchor="middle" class="micro" fill="#534AB7">Hospital info system</text>
+<text x="340" y="689" text-anchor="middle" class="micro" fill="#534AB7">Radiology info system</text>
+<text x="340" y="702" text-anchor="middle" class="micro" fill="#534AB7">Lab info system (internal)</text>
+
+<rect x="450" y="616" width="380" height="140" rx="6" fill="#EEEDFE" fill-opacity="0.3" stroke="#534AB7" stroke-width="0.5" stroke-dasharray="4,2"/>
+<text x="640" y="634" text-anchor="middle" class="bold10" fill="#3C3489">ADMINISTRATIVE SYSTEMS</text>
+
+<rect x="460" y="644" width="170" height="70" rx="5" class="node-hospital"/>
+<text x="545" y="662" text-anchor="middle" class="bold10" fill="#3C3489">Patient admin system</text>
+<text x="545" y="676" text-anchor="middle" class="micro" fill="#534AB7">ADT (Admit/Discharge/Transfer)</text>
+<text x="545" y="689" text-anchor="middle" class="micro" fill="#534AB7">Bed management</text>
+<text x="545" y="702" text-anchor="middle" class="micro" fill="#534AB7">Appointment scheduling</text>
+
+<rect x="640" y="644" width="180" height="70" rx="5" class="node-hospital"/>
+<text x="730" y="662" text-anchor="middle" class="bold10" fill="#3C3489">Billing &amp; finance</text>
+<text x="730" y="676" text-anchor="middle" class="micro" fill="#534AB7">ICD codes → claim codes</text>
+<text x="730" y="689" text-anchor="middle" class="micro" fill="#534AB7">TPA submission</text>
+<text x="730" y="702" text-anchor="middle" class="micro" fill="#534AB7">GST / financial records</text>
+
+<!-- PACS -->
+<rect x="840" y="616" width="260" height="140" rx="6" fill="#EAF3DE" fill-opacity="0.4" stroke="#3B6D11" stroke-width="0.5" stroke-dasharray="4,2"/>
+<text x="970" y="634" text-anchor="middle" class="bold10" fill="#27500A">IMAGING &amp; DEVICES</text>
+<rect x="850" y="644" width="240" height="70" rx="5" class="node-device"/>
+<text x="970" y="662" text-anchor="middle" class="bold10" fill="#27500A">PACS + DICOM store</text>
+<text x="970" y="676" text-anchor="middle" class="micro" fill="#3B6D11">CT/MRI/X-ray images stored</text>
+<text x="970" y="689" text-anchor="middle" class="micro" fill="#3B6D11">RIS worklist integration</text>
+<text x="970" y="702" text-anchor="middle" class="micro" fill="#3B6D11">Cloud PACS optional (AWS/Azure)</text>
+
+<!-- Interoperability -->
+<rect x="1110" y="616" width="310" height="140" rx="6" fill="#EEEDFE" fill-opacity="0.3" stroke="#534AB7" stroke-width="0.5" stroke-dasharray="4,2"/>
+<text x="1265" y="634" text-anchor="middle" class="bold10" fill="#3C3489">INTEROPERABILITY LAYER</text>
+<rect x="1120" y="644" width="135" height="70" rx="5" class="node-hospital"/>
+<text x="1187" y="662" text-anchor="middle" class="bold10" fill="#3C3489">HL7 FHIR gateway</text>
+<text x="1187" y="676" text-anchor="middle" class="micro" fill="#534AB7">ABDM / ABHA integration</text>
+<text x="1187" y="689" text-anchor="middle" class="micro" fill="#534AB7">Health locker push</text>
+<text x="1187" y="702" text-anchor="middle" class="micro" fill="#534AB7">Consent artifact linked</text>
+<rect x="1265" y="644" width="145" height="70" rx="5" class="node-hospital"/>
+<text x="1337" y="662" text-anchor="middle" class="bold10" fill="#3C3489">API / integration bus</text>
+<text x="1337" y="676" text-anchor="middle" class="micro" fill="#534AB7">HL7 v2.x · FHIR R4</text>
+<text x="1337" y="689" text-anchor="middle" class="micro" fill="#534AB7">DICOM · CDA · CCDA</text>
+<text x="1337" y="702" text-anchor="middle" class="micro" fill="#534AB7">Mirth Connect / Azure APIM</text>
+
+<!-- Cybersecurity box hospital -->
+<rect x="1430" y="616" width="230" height="140" rx="6" fill="#FCEBEB" fill-opacity="0.4" stroke="#A32D2D" stroke-width="0.5"/>
+<text x="1545" y="634" text-anchor="middle" class="bold10" fill="#501313">HOSPITAL SECURITY CONTROLS</text>
+<text x="1545" y="650" text-anchor="middle" class="micro" fill="#791F1F">Role-based access (RBAC)</text>
+<text x="1545" y="663" text-anchor="middle" class="micro" fill="#791F1F">AES-256 at rest / TLS 1.3 in transit</text>
+<text x="1545" y="676" text-anchor="middle" class="micro" fill="#791F1F">Audit log (immutable)</text>
+<text x="1545" y="689" text-anchor="middle" class="micro" fill="#791F1F">VAPT compliance (MoHFW 2023)</text>
+<text x="1545" y="702" text-anchor="middle" class="micro" fill="#791F1F">DLP — prevents bulk export</text>
+<text x="1545" y="715" text-anchor="middle" class="micro" fill="#791F1F">SOC 2 / ISO 27001</text>
+<text x="1545" y="728" text-anchor="middle" class="micro" fill="#791F1F">Breach notification: 72 hr (DPDP §8)</text>
+<text x="1545" y="741" text-anchor="middle" class="micro" fill="#791F1F">Data retention: 3–7 yrs (MoHFW)</text>
+
+<!-- Arrow: consent layer → hospital phase -->
+<line x1="170" y1="562" x2="155" y2="616" stroke="#D85A30" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arr-orange)"/>
+<line x1="410" y1="562" x2="400" y2="616" stroke="#D85A30" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arr-orange)"/>
+
+<!-- ============================================================
+     PHASE 3B: ABHA / HEALTH LOCKER (NATIONAL DIGITAL HEALTH)
+     ============================================================ -->
+<rect x="40" y="772" width="1620" height="24" rx="4" fill="#3B6D11"/>
+<text x="860" y="788" text-anchor="middle" font-size="11" font-weight="500" fill="#EAF3DE">PHASE 3B — NATIONAL DIGITAL HEALTH MISSION (ABHA / ABDM) — Government of India Data Layer</text>
+
+<rect x="60" y="808" width="280" height="110" rx="6" class="node-device"/>
+<text x="200" y="826" text-anchor="middle" class="bold11" fill="#27500A">ABHA Health ID (14-digit)</text>
+<text x="200" y="842" text-anchor="middle" class="micro" fill="#3B6D11">Unique health identifier for citizen</text>
+<text x="200" y="855" text-anchor="middle" class="micro" fill="#3B6D11">Aadhar-linked (optional)</text>
+<text x="200" y="868" text-anchor="middle" class="micro" fill="#3B6D11">NHA managed — NIC cloud</text>
+<text x="200" y="881" text-anchor="middle" class="micro" fill="#3B6D11">PHR mobile app access</text>
+<text x="200" y="894" text-anchor="middle" class="micro" fill="#3B6D11">Patient controls sharing</text>
+<text x="200" y="907" text-anchor="middle" class="micro" fill="#3B6D11">Consent through ABDM consent mgr</text>
+
+<rect x="360" y="808" width="280" height="110" rx="6" class="node-device"/>
+<text x="500" y="826" text-anchor="middle" class="bold11" fill="#27500A">Health Information Exchange</text>
+<text x="500" y="842" text-anchor="middle" class="micro" fill="#3B6D11">ABDM HIE — federated model</text>
+<text x="500" y="855" text-anchor="middle" class="micro" fill="#3B6D11">Health Information User (HIU)</text>
+<text x="500" y="868" text-anchor="middle" class="micro" fill="#3B6D11">Health Information Provider (HIP)</text>
+<text x="500" y="881" text-anchor="middle" class="micro" fill="#3B6D11">FHIR bundles exchanged</text>
+<text x="500" y="894" text-anchor="middle" class="micro" fill="#3B6D11">Encrypted in transit &amp; at rest</text>
+<text x="500" y="907" text-anchor="middle" class="micro" fill="#3B6D11">Consent artefact mandated</text>
+
+<rect x="660" y="808" width="280" height="110" rx="6" class="node-device"/>
+<text x="800" y="826" text-anchor="middle" class="bold11" fill="#27500A">Health locker / PHR</text>
+<text x="800" y="842" text-anchor="middle" class="micro" fill="#3B6D11">Personal Health Record store</text>
+<text x="800" y="855" text-anchor="middle" class="micro" fill="#3B6D11">Google Health · Practo · HealthKart</text>
+<text x="800" y="868" text-anchor="middle" class="micro" fill="#3B6D11">ABDM certified PHR apps</text>
+<text x="800" y="881" text-anchor="middle" class="micro" fill="#3B6D11">Patient owns and downloads data</text>
+<text x="800" y="894" text-anchor="middle" class="micro" fill="#3B6D11">Portable health record (FHIR)</text>
+<text x="800" y="907" text-anchor="middle" class="micro" fill="#3B6D11">30-day consent window</text>
+
+<rect x="960" y="808" width="280" height="110" rx="6" class="node-device"/>
+<text x="1100" y="826" text-anchor="middle" class="bold11" fill="#27500A">Consent manager (CM)</text>
+<text x="1100" y="842" text-anchor="middle" class="micro" fill="#3B6D11">ABDM-certified CM (e.g. NDHM CM)</text>
+<text x="1100" y="855" text-anchor="middle" class="micro" fill="#3B6D11">Records grant / revoke events</text>
+<text x="1100" y="868" text-anchor="middle" class="micro" fill="#3B6D11">Time-bound consent artefacts</text>
+<text x="1100" y="881" text-anchor="middle" class="micro" fill="#3B6D11">Purpose-limited access tokens</text>
+<text x="1100" y="894" text-anchor="middle" class="micro" fill="#3B6D11">DPDP §8(1) — fiduciary obligation</text>
+<text x="1100" y="907" text-anchor="middle" class="micro" fill="#3B6D11">Audit trail published to patient</text>
+
+<rect x="1260" y="808" width="400" height="110" rx="6" class="node-device"/>
+<text x="1460" y="826" text-anchor="middle" class="bold11" fill="#27500A">ABHA data risks &amp; protections</text>
+<text x="1460" y="842" text-anchor="middle" class="micro" fill="#3B6D11">Risk: Aadhar linkage — de-anonymisation risk if breached</text>
+<text x="1460" y="855" text-anchor="middle" class="micro" fill="#3B6D11">Risk: PHR app data sold to 3rd party advertisers</text>
+<text x="1460" y="868" text-anchor="middle" class="micro" fill="#3B6D11">Risk: Consent fatigue → blanket grants</text>
+<text x="1460" y="881" text-anchor="middle" class="micro" fill="#3B6D11">Mitigation: NHA penetration testing mandate</text>
+<text x="1460" y="894" text-anchor="middle" class="micro" fill="#3B6D11">Mitigation: Purpose limitation in artefact</text>
+<text x="1460" y="907" text-anchor="middle" class="micro" fill="#3B6D11">DPDP Board oversight from 2025</text>
+
+<line x1="340" y1="863" x2="358" y2="863" stroke="#3B6D11" stroke-width="1" marker-end="url(#arr)"/>
+<line x1="640" y1="863" x2="658" y2="863" stroke="#3B6D11" stroke-width="1" marker-end="url(#arr)"/>
+<line x1="940" y1="863" x2="958" y2="863" stroke="#3B6D11" stroke-width="1" marker-end="url(#arr)"/>
+<line x1="1240" y1="863" x2="1258" y2="863" stroke="#3B6D11" stroke-width="1" marker-end="url(#arr)"/>
+
+<!-- ============================================================
+     PHASE 4: DIAGNOSTICS LAB ECOSYSTEM
+     ============================================================ -->
+<rect x="40" y="934" width="1620" height="24" rx="4" fill="#0F6E56"/>
+<text x="860" y="950" text-anchor="middle" font-size="11" font-weight="500" fill="#E1F5EE">PHASE 4 — DIAGNOSTIC LABORATORY ECOSYSTEM (Data Fiduciary #2)</text>
+
+<rect x="60" y="970" width="270" height="130" rx="6" class="node-lab"/>
+<text x="195" y="990" text-anchor="middle" class="bold11" fill="#085041">Sample lifecycle</text>
+<text x="195" y="1006" text-anchor="middle" class="micro" fill="#0F6E56">Collection → Transport → Aliquoting</text>
+<text x="195" y="1019" text-anchor="middle" class="micro" fill="#0F6E56">Barcode scan at each step</text>
+<text x="195" y="1032" text-anchor="middle" class="micro" fill="#0F6E56">Temperature monitoring log</text>
+<text x="195" y="1045" text-anchor="middle" class="micro" fill="#0F6E56">Chain of custody (NABL accred.)</text>
+<text x="195" y="1058" text-anchor="middle" class="micro" fill="#0F6E56">Data: sample ID + patient ID + time</text>
+<text x="195" y="1071" text-anchor="middle" class="micro" fill="#0F6E56">LIMS — Oracle / SCC / Meditech</text>
+<text x="195" y="1084" text-anchor="middle" class="micro" fill="#0F6E56">Refrigeration logs (IoT sensor)</text>
+
+<rect x="350" y="970" width="270" height="130" rx="6" class="node-lab"/>
+<text x="485" y="990" text-anchor="middle" class="bold11" fill="#085041">Analysis &amp; results</text>
+<text x="485" y="1006" text-anchor="middle" class="micro" fill="#0F6E56">Analyser machine output (CSV/HL7)</text>
+<text x="485" y="1019" text-anchor="middle" class="micro" fill="#0F6E56">Haematology / biochemistry</text>
+<text x="485" y="1032" text-anchor="middle" class="micro" fill="#0F6E56">Pathologist review + sign-off</text>
+<text x="485" y="1045" text-anchor="middle" class="micro" fill="#0F6E56">Digital signature (PKI)</text>
+<text x="485" y="1058" text-anchor="middle" class="micro" fill="#0F6E56">Result PDF / FHIR DiagReport</text>
+<text x="485" y="1071" text-anchor="middle" class="micro" fill="#0F6E56">Flagged values → auto-alert to HCP</text>
+<text x="485" y="1084" text-anchor="middle" class="micro" fill="#0F6E56">Genetic / genomic data: extra consent</text>
+
+<rect x="640" y="970" width="270" height="130" rx="6" class="node-lab"/>
+<text x="775" y="990" text-anchor="middle" class="bold11" fill="#085041">Report delivery</text>
+<text x="775" y="1006" text-anchor="middle" class="micro" fill="#0F6E56">SMS / WhatsApp / email — PDF</text>
+<text x="775" y="1019" text-anchor="middle" class="micro" fill="#0F6E56">Lab portal (patient login)</text>
+<text x="775" y="1032" text-anchor="middle" class="micro" fill="#0F6E56">Push to ABHA health locker</text>
+<text x="775" y="1045" text-anchor="middle" class="micro" fill="#0F6E56">Referring doctor portal access</text>
+<text x="775" y="1058" text-anchor="middle" class="micro" fill="#0F6E56">Third-party app (PharmEasy/1mg)</text>
+<text x="775" y="1071" text-anchor="middle" class="micro" fill="#0F6E56">Channel encryption: TLS 1.3</text>
+<text x="775" y="1084" text-anchor="middle" class="micro" fill="#0F6E56">Retention: physical 5yr / digital 7yr</text>
+
+<rect x="930" y="970" width="270" height="130" rx="6" class="node-lab"/>
+<text x="1065" y="990" text-anchor="middle" class="bold11" fill="#085041">Lab cloud platform</text>
+<text x="1065" y="1006" text-anchor="middle" class="micro" fill="#0F6E56">SRL Diagnostics / Thyrocare / Dr Lal</text>
+<text x="1065" y="1019" text-anchor="middle" class="micro" fill="#0F6E56">AWS / Azure / GCP hosted LIMS</text>
+<text x="1065" y="1032" text-anchor="middle" class="micro" fill="#0F6E56">Data localisation: India servers req.</text>
+<text x="1065" y="1045" text-anchor="middle" class="micro" fill="#0F6E56">DPDP §16 — Cross-border transfer rules</text>
+<text x="1065" y="1058" text-anchor="middle" class="micro" fill="#0F6E56">Backup: geo-redundant (Indian DCs)</text>
+<text x="1065" y="1071" text-anchor="middle" class="micro" fill="#0F6E56">API to hospital EMR (HL7 ADT/ORU)</text>
+<text x="1065" y="1084" text-anchor="middle" class="micro" fill="#0F6E56">SOC audit log — 6-month retention</text>
+
+<rect x="1220" y="970" width="270" height="130" rx="6" class="node-lab"/>
+<text x="1355" y="990" text-anchor="middle" class="bold11" fill="#085041">Genetic data — extra layer</text>
+<text x="1355" y="1006" text-anchor="middle" class="micro" fill="#0F6E56">Genomic sequencing (WES/WGS)</text>
+<text x="1355" y="1019" text-anchor="middle" class="micro" fill="#0F6E56">GWAS data — research goldmine</text>
+<text x="1355" y="1032" text-anchor="middle" class="micro" fill="#0F6E56">Sensitive category (DPDP §5)</text>
+<text x="1355" y="1045" text-anchor="middle" class="micro" fill="#0F6E56">Cannot be anonymised fully</text>
+<text x="1355" y="1058" text-anchor="middle" class="micro" fill="#0F6E56">Family member data implicated</text>
+<text x="1355" y="1071" text-anchor="middle" class="micro" fill="#0F6E56">GDPR Art.9(2)(h) — biometric</text>
+<text x="1355" y="1084" text-anchor="middle" class="micro" fill="#0F6E56">ICMR Biobanking Policy 2023</text>
+
+<rect x="1500" y="970" width="160" height="130" rx="6" class="node-breach"/>
+<text x="1580" y="990" text-anchor="middle" class="bold10" fill="#501313">⚠ Lab risk vectors</text>
+<text x="1580" y="1006" text-anchor="middle" class="micro" fill="#791F1F">Bulk SQL export (insider)</text>
+<text x="1580" y="1019" text-anchor="middle" class="micro" fill="#791F1F">Unsecured PDF delivery</text>
+<text x="1580" y="1032" text-anchor="middle" class="micro" fill="#791F1F">LIMS API key leak</text>
+<text x="1580" y="1045" text-anchor="middle" class="micro" fill="#791F1F">WhatsApp report sharing</text>
+<text x="1580" y="1058" text-anchor="middle" class="micro" fill="#791F1F">Cold storage no-encrypt</text>
+<text x="1580" y="1071" text-anchor="middle" class="micro" fill="#791F1F">3rd-party courier intercept</text>
+<text x="1580" y="1084" text-anchor="middle" class="micro" fill="#791F1F">Aggregator data sell-on</text>
+
+<line x1="330" y1="1035" x2="348" y2="1035" stroke="#0F6E56" stroke-width="1" marker-end="url(#arr)"/>
+<line x1="620" y1="1035" x2="638" y2="1035" stroke="#0F6E56" stroke-width="1" marker-end="url(#arr)"/>
+<line x1="910" y1="1035" x2="928" y2="1035" stroke="#0F6E56" stroke-width="1" marker-end="url(#arr)"/>
+<line x1="1200" y1="1035" x2="1218" y2="1035" stroke="#0F6E56" stroke-width="1" marker-end="url(#arr)"/>
+<line x1="1490" y1="1035" x2="1498" y2="1035" stroke="#E24B4A" stroke-width="1" marker-end="url(#arr-red)"/>
+
+<!-- ============================================================
+     PHASE 5: INSURANCE ECOSYSTEM
+     ============================================================ -->
+<rect x="40" y="1116" width="1620" height="24" rx="4" fill="#185FA5"/>
+<text x="860" y="1132" text-anchor="middle" font-size="11" font-weight="500" fill="#E6F1FB">PHASE 5 — INSURANCE &amp; TPA ECOSYSTEM (Data Fiduciary #3)</text>
+
+<rect x="60" y="1152" width="250" height="130" rx="6" class="node-insurance"/>
+<text x="185" y="1172" text-anchor="middle" class="bold11" fill="#0C447C">Claim submission</text>
+<text x="185" y="1188" text-anchor="middle" class="micro" fill="#185FA5">Hospital submits discharge summary</text>
+<text x="185" y="1201" text-anchor="middle" class="micro" fill="#185FA5">ICD codes + procedure codes</text>
+<text x="185" y="1214" text-anchor="middle" class="micro" fill="#185FA5">Lab reports attached (PDF)</text>
+<text x="185" y="1227" text-anchor="middle" class="micro" fill="#185FA5">TPA portal (Medi Assist / Vipul)</text>
+<text x="185" y="1240" text-anchor="middle" class="micro" fill="#185FA5">EDI / HL7 ANSI X12</text>
+<text x="185" y="1253" text-anchor="middle" class="micro" fill="#185FA5">IRDAI FHR (Financial Health Record)</text>
+<text x="185" y="1266" text-anchor="middle" class="micro" fill="#185FA5">Data scope: max necessary only</text>
+
+<rect x="330" y="1152" width="250" height="130" rx="6" class="node-insurance"/>
+<text x="455" y="1172" text-anchor="middle" class="bold11" fill="#0C447C">Adjudication &amp; ML scoring</text>
+<text x="455" y="1188" text-anchor="middle" class="micro" fill="#185FA5">AI fraud detection (anomaly)</text>
+<text x="455" y="1201" text-anchor="middle" class="micro" fill="#185FA5">NLP on discharge summary</text>
+<text x="455" y="1214" text-anchor="middle" class="micro" fill="#185FA5">Predictive risk model (actuarial)</text>
+<text x="455" y="1227" text-anchor="middle" class="micro" fill="#185FA5">Claims history matching</text>
+<text x="455" y="1240" text-anchor="middle" class="micro" fill="#185FA5">Data used: PHI + financial history</text>
+<text x="455" y="1253" text-anchor="middle" class="micro" fill="#185FA5">IRDAI circular — model explainability</text>
+<text x="455" y="1266" text-anchor="middle" class="micro" fill="#185FA5">GDPR Art.22 — automated decisions</text>
+
+<rect x="600" y="1152" width="250" height="130" rx="6" class="node-insurance"/>
+<text x="725" y="1172" text-anchor="middle" class="bold11" fill="#0C447C">Insurer data stores</text>
+<text x="725" y="1188" text-anchor="middle" class="micro" fill="#185FA5">Policy management system (PAS)</text>
+<text x="725" y="1201" text-anchor="middle" class="micro" fill="#185FA5">Claims warehouse (DWH)</text>
+<text x="725" y="1214" text-anchor="middle" class="micro" fill="#185FA5">CRM — customer 360 profile</text>
+<text x="725" y="1227" text-anchor="middle" class="micro" fill="#185FA5">Salesforce / SAP / Oracle</text>
+<text x="725" y="1240" text-anchor="middle" class="micro" fill="#185FA5">Cloud: AWS Mumbai / Azure India</text>
+<text x="725" y="1253" text-anchor="middle" class="micro" fill="#185FA5">Reinsurer data share (global)</text>
+<text x="725" y="1266" text-anchor="middle" class="micro" fill="#185FA5">Retention: 7yr (IRDAI mandate)</text>
+
+<rect x="870" y="1152" width="250" height="130" rx="6" class="node-insurance"/>
+<text x="995" y="1172" text-anchor="middle" class="bold11" fill="#0C447C">Data shared with</text>
+<text x="995" y="1188" text-anchor="middle" class="micro" fill="#185FA5">Reinsurers (Munich Re / SwissRe)</text>
+<text x="995" y="1201" text-anchor="middle" class="micro" fill="#185FA5">Co-insurer (joint policy)</text>
+<text x="995" y="1214" text-anchor="middle" class="micro" fill="#185FA5">Medical underwriter (3rd party)</text>
+<text x="995" y="1227" text-anchor="middle" class="micro" fill="#185FA5">IRDAI regulatory reporting</text>
+<text x="995" y="1240" text-anchor="middle" class="micro" fill="#185FA5">IB (Insurance Bureau of India)</text>
+<text x="995" y="1253" text-anchor="middle" class="micro" fill="#185FA5">Cross-border: adequacy req. (DPDP)</text>
+<text x="995" y="1266" text-anchor="middle" class="micro" fill="#185FA5">HIPAA BAA required (US re-insurer)</text>
+
+<rect x="1140" y="1152" width="250" height="130" rx="6" class="node-insurance"/>
+<text x="1265" y="1172" text-anchor="middle" class="bold11" fill="#0C447C">Wellness program data</text>
+<text x="1265" y="1188" text-anchor="middle" class="micro" fill="#185FA5">Wearable device (FitBit/Apple)</text>
+<text x="1265" y="1201" text-anchor="middle" class="micro" fill="#185FA5">Step count · sleep · heart rate</text>
+<text x="1265" y="1214" text-anchor="middle" class="micro" fill="#185FA5">Incentive premium discount offered</text>
+<text x="1265" y="1227" text-anchor="middle" class="micro" fill="#185FA5">Risk: coercive consent (premium)</text>
+<text x="1265" y="1240" text-anchor="middle" class="micro" fill="#185FA5">DPDP §6 — voluntary must be real</text>
+<text x="1265" y="1253" text-anchor="middle" class="micro" fill="#185FA5">FTC complaint — Aetna precedent</text>
+<text x="1265" y="1266" text-anchor="middle" class="micro" fill="#185FA5">GDPR — purpose limitation risk</text>
+
+<rect x="1410" y="1152" width="250" height="130" rx="6" class="node-breach"/>
+<text x="1535" y="1172" text-anchor="middle" class="bold10" fill="#501313">⚠ Insurance risk vectors</text>
+<text x="1535" y="1188" text-anchor="middle" class="micro" fill="#791F1F">Discrimination via health data score</text>
+<text x="1535" y="1201" text-anchor="middle" class="micro" fill="#791F1F">Reinsurer cross-border leak</text>
+<text x="1535" y="1214" text-anchor="middle" class="micro" fill="#791F1F">TPA credential compromise</text>
+<text x="1535" y="1227" text-anchor="middle" class="micro" fill="#791F1F">Claims data sold to pharma</text>
+<text x="1535" y="1240" text-anchor="middle" class="micro" fill="#791F1F">Pre-auth abuse (unnecessary Rx)</text>
+<text x="1535" y="1253" text-anchor="middle" class="micro" fill="#791F1F">ML model discrimination (IRDAI)</text>
+<text x="1535" y="1266" text-anchor="middle" class="micro" fill="#791F1F">No right to explanation (AI)</text>
+
+<line x1="310" y1="1217" x2="328" y2="1217" stroke="#185FA5" stroke-width="1" marker-end="url(#arr-blue)"/>
+<line x1="580" y1="1217" x2="598" y2="1217" stroke="#185FA5" stroke-width="1" marker-end="url(#arr-blue)"/>
+<line x1="850" y1="1217" x2="868" y2="1217" stroke="#185FA5" stroke-width="1" marker-end="url(#arr-blue)"/>
+<line x1="1120" y1="1217" x2="1138" y2="1217" stroke="#185FA5" stroke-width="1" marker-end="url(#arr-blue)"/>
+<line x1="1390" y1="1217" x2="1408" y2="1217" stroke="#E24B4A" stroke-width="1" marker-end="url(#arr-red)"/>
+
+<!-- ============================================================
+     PHASE 6: PHARMACY ECOSYSTEM
+     ============================================================ -->
+<rect x="40" y="1298" width="1620" height="24" rx="4" fill="#993556"/>
+<text x="860" y="1314" text-anchor="middle" font-size="11" font-weight="500" fill="#FBEAF0">PHASE 6 — PHARMACY &amp; DRUG SUPPLY CHAIN (Data Fiduciary #4)</text>
+
+<rect x="60" y="1334" width="250" height="130" rx="6" class="node-pharma"/>
+<text x="185" y="1354" text-anchor="middle" class="bold11" fill="#72243E">Prescription intake</text>
+<text x="185" y="1370" text-anchor="middle" class="micro" fill="#993556">Paper Rx — OCR scan to digital</text>
+<text x="185" y="1383" text-anchor="middle" class="micro" fill="#993556">e-Prescription (CoWin / ABDM)</text>
+<text x="185" y="1396" text-anchor="middle" class="micro" fill="#993556">Patient ID linked (ABHA)</text>
+<text x="185" y="1409" text-anchor="middle" class="micro" fill="#993556">Drug schedule (H / H1 / X) verified</text>
+<text x="185" y="1422" text-anchor="middle" class="micro" fill="#993556">Narcotic drugs: Form 6A register</text>
+<text x="185" y="1435" text-anchor="middle" class="micro" fill="#993556">CDSCO licensing check</text>
+<text x="185" y="1448" text-anchor="middle" class="micro" fill="#993556">POS system: Rx ID + patient ID</text>
+
+<rect x="330" y="1334" width="250" height="130" rx="6" class="node-pharma"/>
+<text x="455" y="1354" text-anchor="middle" class="bold11" fill="#72243E">Dispensing record</text>
+<text x="455" y="1370" text-anchor="middle" class="micro" fill="#993556">Drug name · batch · expiry · qty</text>
+<text x="455" y="1383" text-anchor="middle" class="micro" fill="#993556">Pharmacist ID (digital signature)</text>
+<text x="455" y="1396" text-anchor="middle" class="micro" fill="#993556">Substitution record if generic</text>
+<text x="455" y="1409" text-anchor="middle" class="micro" fill="#993556">Adverse reaction flag optional</text>
+<text x="455" y="1422" text-anchor="middle" class="micro" fill="#993556">ERP: SAP / Oracle Rx module</text>
+<text x="455" y="1435" text-anchor="middle" class="micro" fill="#993556">Apollo / MedPlus / 1mg SaaS</text>
+<text x="455" y="1448" text-anchor="middle" class="micro" fill="#993556">Data at rest: AES-256 (SOC2)</text>
+
+<rect x="600" y="1334" width="250" height="130" rx="6" class="node-pharma"/>
+<text x="725" y="1354" text-anchor="middle" class="bold11" fill="#72243E">Pharmacovigilance</text>
+<text x="725" y="1370" text-anchor="middle" class="micro" fill="#993556">ADR reporting to PVPI (CDSCO)</text>
+<text x="725" y="1383" text-anchor="middle" class="micro" fill="#993556">VIGIBASE — WHO global signal</text>
+<text x="725" y="1396" text-anchor="middle" class="micro" fill="#993556">Pseudonymised patient data only</text>
+<text x="725" y="1409" text-anchor="middle" class="micro" fill="#993556">Batch recall traceability</text>
+<text x="725" y="1422" text-anchor="middle" class="micro" fill="#993556">Risk: re-identification from ADR</text>
+<text x="725" y="1435" text-anchor="middle" class="micro" fill="#993556">WHO ICSRs — E2B(R3) format</text>
+<text x="725" y="1448" text-anchor="middle" class="micro" fill="#993556">Regulatory exception for reporting</text>
+
+<rect x="870" y="1334" width="250" height="130" rx="6" class="node-pharma"/>
+<text x="995" y="1354" text-anchor="middle" class="bold11" fill="#72243E">Supply chain data</text>
+<text x="995" y="1370" text-anchor="middle" class="micro" fill="#993556">Drug traceability — barcode scan</text>
+<text x="995" y="1383" text-anchor="middle" class="micro" fill="#993556">Manufacturer → C&amp;F → retailer</text>
+<text x="995" y="1396" text-anchor="middle" class="micro" fill="#993556">Digi Pharma — India e-track system</text>
+<text x="995" y="1409" text-anchor="middle" class="micro" fill="#993556">Cold chain: IoT temperature log</text>
+<text x="995" y="1422" text-anchor="middle" class="micro" fill="#993556">No PHI in supply chain normally</text>
+<text x="995" y="1435" text-anchor="middle" class="micro" fill="#993556">Except specialty (biologics/cancer)</text>
+<text x="995" y="1448" text-anchor="middle" class="micro" fill="#993556">Home delivery: GPS + name + address</text>
+
+<rect x="1140" y="1334" width="250" height="130" rx="6" class="node-pharma"/>
+<text x="1265" y="1354" text-anchor="middle" class="bold11" fill="#72243E">Online pharmacy data</text>
+<text x="1265" y="1370" text-anchor="middle" class="micro" fill="#993556">PharmEasy / 1mg / Tata 1mg</text>
+<text x="1265" y="1383" text-anchor="middle" class="micro" fill="#993556">Customer profile + order history</text>
+<text x="1265" y="1396" text-anchor="middle" class="micro" fill="#993556">Search queries — behavioural data</text>
+<text x="1265" y="1409" text-anchor="middle" class="micro" fill="#993556">Google / Meta pixel (adtech risk)</text>
+<text x="1265" y="1422" text-anchor="middle" class="micro" fill="#993556">Payment metadata (RBI tokenised)</text>
+<text x="1265" y="1435" text-anchor="middle" class="micro" fill="#993556">E-pharmacy rules 2018 (pending)</text>
+<text x="1265" y="1448" text-anchor="middle" class="micro" fill="#993556">DPDP §5 — purpose limitation</text>
+
+<rect x="1410" y="1334" width="250" height="130" rx="6" class="node-breach"/>
+<text x="1535" y="1354" text-anchor="middle" class="bold10" fill="#501313">⚠ Pharmacy risk vectors</text>
+<text x="1535" y="1370" text-anchor="middle" class="micro" fill="#791F1F">Rx history → lifestyle inference</text>
+<text x="1535" y="1383" text-anchor="middle" class="micro" fill="#791F1F">Advertiser pixel on health site</text>
+<text x="1535" y="1396" text-anchor="middle" class="micro" fill="#791F1F">Delivery partner accesses name</text>
+<text x="1535" y="1409" text-anchor="middle" class="micro" fill="#791F1F">Unsecured cold storage</text>
+<text x="1535" y="1422" text-anchor="middle" class="micro" fill="#791F1F">Narcotic diversion via fake Rx</text>
+<text x="1535" y="1435" text-anchor="middle" class="micro" fill="#791F1F">ADR re-identification risk</text>
+<text x="1535" y="1448" text-anchor="middle" class="micro" fill="#791F1F">Cross-sell with health insurer</text>
+
+<line x1="310" y1="1399" x2="328" y2="1399" stroke="#993556" stroke-width="1" marker-end="url(#arr)"/>
+<line x1="580" y1="1399" x2="598" y2="1399" stroke="#993556" stroke-width="1" marker-end="url(#arr)"/>
+<line x1="850" y1="1399" x2="868" y2="1399" stroke="#993556" stroke-width="1" marker-end="url(#arr)"/>
+<line x1="1120" y1="1399" x2="1138" y2="1399" stroke="#993556" stroke-width="1" marker-end="url(#arr)"/>
+<line x1="1390" y1="1399" x2="1408" y2="1399" stroke="#E24B4A" stroke-width="1" marker-end="url(#arr-red)"/>
+
+<!-- ============================================================
+     PHASE 7: MEDICAL RESEARCH ECOSYSTEM
+     ============================================================ -->
+<rect x="40" y="1480" width="1620" height="24" rx="4" fill="#854F0B"/>
+<text x="860" y="1496" text-anchor="middle" font-size="11" font-weight="500" fill="#FAEEDA">PHASE 7 — MEDICAL RESEARCH &amp; BIOPHARMA ECOSYSTEM (Data Fiduciary #5)</text>
+
+<rect x="60" y="1516" width="250" height="130" rx="6" class="node-research"/>
+<text x="185" y="1536" text-anchor="middle" class="bold11" fill="#633806">Data sourcing for research</text>
+<text x="185" y="1552" text-anchor="middle" class="micro" fill="#854F0B">Hospital EMR data (de-identified)</text>
+<text x="185" y="1565" text-anchor="middle" class="micro" fill="#854F0B">Biobank samples (ICMR / DBT)</text>
+<text x="185" y="1578" text-anchor="middle" class="micro" fill="#854F0B">Cohort studies — patient registry</text>
+<text x="185" y="1591" text-anchor="middle" class="micro" fill="#854F0B">Lab LIMS export (anonymised)</text>
+<text x="185" y="1604" text-anchor="middle" class="micro" fill="#854F0B">Real World Evidence (RWE) datasets</text>
+<text x="185" y="1617" text-anchor="middle" class="micro" fill="#854F0B">Insurance claims (de-id) licence</text>
+<text x="185" y="1630" text-anchor="middle" class="micro" fill="#854F0B">IRB / IEC approval mandatory</text>
+
+<rect x="330" y="1516" width="250" height="130" rx="6" class="node-research"/>
+<text x="455" y="1536" text-anchor="middle" class="bold11" fill="#633806">Anonymisation pipeline</text>
+<text x="455" y="1552" text-anchor="middle" class="micro" fill="#854F0B">k-anonymity ≥ 5 (ICMR standard)</text>
+<text x="455" y="1565" text-anchor="middle" class="micro" fill="#854F0B">Differential privacy (ε-DP)</text>
+<text x="455" y="1578" text-anchor="middle" class="micro" fill="#854F0B">Name/DOB/Aadhar suppressed</text>
+<text x="455" y="1591" text-anchor="middle" class="micro" fill="#854F0B">GDPR Recital 26 — not personal</text>
+<text x="455" y="1604" text-anchor="middle" class="micro" fill="#854F0B">Risk: re-id with genomic + EHR</text>
+<text x="455" y="1617" text-anchor="middle" class="micro" fill="#854F0B">Synthetic data alternative</text>
+<text x="455" y="1630" text-anchor="middle" class="micro" fill="#854F0B">DPDP Schedule — research basis</text>
+
+<rect x="600" y="1516" width="250" height="130" rx="6" class="node-research"/>
+<text x="725" y="1536" text-anchor="middle" class="bold11" fill="#633806">Clinical trial data</text>
+<text x="725" y="1552" text-anchor="middle" class="micro" fill="#854F0B">CTRI registration mandatory</text>
+<text x="725" y="1565" text-anchor="middle" class="micro" fill="#854F0B">ICH-GCP E6(R2) compliance</text>
+<text x="725" y="1578" text-anchor="middle" class="micro" fill="#854F0B">EDC system (Medidata / Veeva)</text>
+<text x="725" y="1591" text-anchor="middle" class="micro" fill="#854F0B">21 CFR Part 11 — e-signature</text>
+<text x="725" y="1604" text-anchor="middle" class="micro" fill="#854F0B">Source data verification (SDV)</text>
+<text x="725" y="1617" text-anchor="middle" class="micro" fill="#854F0B">CDSCO New Drugs Rules 2019</text>
+<text x="725" y="1630" text-anchor="middle" class="micro" fill="#854F0B">Data locked → regulatory package</text>
+
+<rect x="870" y="1516" width="250" height="130" rx="6" class="node-research"/>
+<text x="995" y="1536" text-anchor="middle" class="bold11" fill="#633806">AI / ML research use</text>
+<text x="995" y="1552" text-anchor="middle" class="micro" fill="#854F0B">Federated learning (no raw export)</text>
+<text x="995" y="1565" text-anchor="middle" class="micro" fill="#854F0B">Model trained on hospital server</text>
+<text x="995" y="1578" text-anchor="middle" class="micro" fill="#854F0B">Gradient updates only shared</text>
+<text x="995" y="1591" text-anchor="middle" class="micro" fill="#854F0B">Secure multiparty computation</text>
+<text x="995" y="1604" text-anchor="middle" class="micro" fill="#854F0B">Homomorphic encryption (HE)</text>
+<text x="995" y="1617" text-anchor="middle" class="micro" fill="#854F0B">Model bias audit required</text>
+<text x="995" y="1630" text-anchor="middle" class="micro" fill="#854F0B">MEITY AI framework 2024</text>
+
+<rect x="1140" y="1516" width="250" height="130" rx="6" class="node-research"/>
+<text x="1265" y="1536" text-anchor="middle" class="bold11" fill="#633806">Biopharma data use</text>
+<text x="1265" y="1552" text-anchor="middle" class="micro" fill="#854F0B">Pfizer / AZ / Sun Pharma data</text>
+<text x="1265" y="1565" text-anchor="middle" class="micro" fill="#854F0B">RWE platform (IQVIA / Symphony)</text>
+<text x="1265" y="1578" text-anchor="middle" class="micro" fill="#854F0B">Claims + Rx + lab data joined</text>
+<text x="1265" y="1591" text-anchor="middle" class="micro" fill="#854F0B">Patient journey analytics</text>
+<text x="1265" y="1604" text-anchor="middle" class="micro" fill="#854F0B">Commercial: licence fee model</text>
+<text x="1265" y="1617" text-anchor="middle" class="micro" fill="#854F0B">Risk: commercial exploit of RWE</text>
+<text x="1265" y="1630" text-anchor="middle" class="micro" fill="#854F0B">DPDP §4 — purpose limitation</text>
+
+<rect x="1410" y="1516" width="250" height="130" rx="6" class="node-breach"/>
+<text x="1535" y="1536" text-anchor="middle" class="bold10" fill="#501313">⚠ Research risk vectors</text>
+<text x="1535" y="1552" text-anchor="middle" class="micro" fill="#791F1F">Re-identification of anonymised set</text>
+<text x="1535" y="1565" text-anchor="middle" class="micro" fill="#791F1F">Genomic data linkage attack</text>
+<text x="1535" y="1578" text-anchor="middle" class="micro" fill="#791F1F">IRB-approved scope creep</text>
+<text x="1535" y="1591" text-anchor="middle" class="micro" fill="#791F1F">Biopharma IP extraction</text>
+<text x="1535" y="1604" text-anchor="middle" class="micro" fill="#791F1F">Cross-border EDC data export</text>
+<text x="1535" y="1617" text-anchor="middle" class="micro" fill="#791F1F">AI model inversion attack</text>
+<text x="1535" y="1630" text-anchor="middle" class="micro" fill="#791F1F">Publication re-id risk</text>
+
+<line x1="310" y1="1581" x2="328" y2="1581" stroke="#854F0B" stroke-width="1" marker-end="url(#arr)"/>
+<line x1="580" y1="1581" x2="598" y2="1581" stroke="#854F0B" stroke-width="1" marker-end="url(#arr)"/>
+<line x1="850" y1="1581" x2="868" y2="1581" stroke="#854F0B" stroke-width="1" marker-end="url(#arr)"/>
+<line x1="1120" y1="1581" x2="1138" y2="1581" stroke="#854F0B" stroke-width="1" marker-end="url(#arr)"/>
+<line x1="1390" y1="1581" x2="1408" y2="1581" stroke="#E24B4A" stroke-width="1" marker-end="url(#arr-red)"/>
+
+<!-- ============================================================
+     PHASE 8: CLOUD / SAAS INFRASTRUCTURE LAYER
+     ============================================================ -->
+<rect x="40" y="1662" width="1620" height="24" rx="4" fill="#444441"/>
+<text x="860" y="1678" text-anchor="middle" font-size="11" font-weight="500" fill="#D3D1C7">PHASE 8 — CLOUD &amp; SAAS INFRASTRUCTURE (Data Processors — all institutions)</text>
+
+<rect x="60" y="1698" width="250" height="140" rx="6" class="node-cloud"/>
+<text x="185" y="1716" text-anchor="middle" class="bold11" fill="#444441">AWS (Amazon)</text>
+<text x="185" y="1732" text-anchor="middle" class="micro" fill="#5F5E5A">AWS Mumbai (ap-south-1) Region</text>
+<text x="185" y="1745" text-anchor="middle" class="micro" fill="#5F5E5A">HIPAA BAA available</text>
+<text x="185" y="1758" text-anchor="middle" class="micro" fill="#5F5E5A">ISO 27001 · SOC 2 Type II</text>
+<text x="185" y="1771" text-anchor="middle" class="micro" fill="#5F5E5A">RDS · S3 · EC2 · Lambda</text>
+<text x="185" y="1784" text-anchor="middle" class="micro" fill="#5F5E5A">HealthLake — FHIR datastore</text>
+<text x="185" y="1797" text-anchor="middle" class="micro" fill="#5F5E5A">CloudTrail audit logging</text>
+<text x="185" y="1810" text-anchor="middle" class="micro" fill="#5F5E5A">KMS encryption at rest</text>
+<text x="185" y="1823" text-anchor="middle" class="micro" fill="#5F5E5A">VPC private endpoint — no internet</text>
+
+<rect x="330" y="1698" width="250" height="140" rx="6" class="node-cloud"/>
+<text x="455" y="1716" text-anchor="middle" class="bold11" fill="#444441">Microsoft Azure</text>
+<text x="455" y="1732" text-anchor="middle" class="micro" fill="#5F5E5A">Azure India Central (Pune)</text>
+<text x="455" y="1745" text-anchor="middle" class="micro" fill="#5F5E5A">Azure Health Data Services</text>
+<text x="455" y="1758" text-anchor="middle" class="micro" fill="#5F5E5A">FHIR API + DICOM service</text>
+<text x="455" y="1771" text-anchor="middle" class="micro" fill="#5F5E5A">Defender for Cloud (SIEM)</text>
+<text x="455" y="1784" text-anchor="middle" class="micro" fill="#5F5E5A">Entra ID (IAM) — RBAC</text>
+<text x="455" y="1797" text-anchor="middle" class="micro" fill="#5F5E5A">Microsoft 365 (clinical comms)</text>
+<text x="455" y="1810" text-anchor="middle" class="micro" fill="#5F5E5A">HIPAA BAA · ISO 27799</text>
+<text x="455" y="1823" text-anchor="middle" class="micro" fill="#5F5E5A">Purview — data lineage tracking</text>
+
+<rect x="600" y="1698" width="250" height="140" rx="6" class="node-cloud"/>
+<text x="725" y="1716" text-anchor="middle" class="bold11" fill="#444441">Google Cloud Platform</text>
+<text x="725" y="1732" text-anchor="middle" class="micro" fill="#5F5E5A">GCP Mumbai / Delhi regions</text>
+<text x="725" y="1745" text-anchor="middle" class="micro" fill="#5F5E5A">Healthcare API (FHIR/DICOM/HL7)</text>
+<text x="725" y="1758" text-anchor="middle" class="micro" fill="#5F5E5A">BigQuery — analytics warehouse</text>
+<text x="725" y="1771" text-anchor="middle" class="micro" fill="#5F5E5A">Vertex AI — clinical ML</text>
+<text x="725" y="1784" text-anchor="middle" class="micro" fill="#5F5E5A">Google Workspace (hospital email)</text>
+<text x="725" y="1797" text-anchor="middle" class="micro" fill="#5F5E5A">Cloud DLP — auto-detect PHI</text>
+<text x="725" y="1810" text-anchor="middle" class="micro" fill="#5F5E5A">HIPAA compliant (BAA needed)</text>
+<text x="725" y="1823" text-anchor="middle" class="micro" fill="#5F5E5A">Data Catalog — lineage graph</text>
+
+<rect x="870" y="1698" width="250" height="140" rx="6" class="node-cloud"/>
+<text x="995" y="1716" text-anchor="middle" class="bold11" fill="#444441">SaaS — clinical &amp; admin</text>
+<text x="995" y="1732" text-anchor="middle" class="micro" fill="#5F5E5A">Epic / Oracle Health (EHR)</text>
+<text x="995" y="1745" text-anchor="middle" class="micro" fill="#5F5E5A">Salesforce Health Cloud (CRM)</text>
+<text x="995" y="1758" text-anchor="middle" class="micro" fill="#5F5E5A">Meditech Expanse (HIS)</text>
+<text x="995" y="1771" text-anchor="middle" class="micro" fill="#5F5E5A">Medi Assist TPA portal</text>
+<text x="995" y="1784" text-anchor="middle" class="micro" fill="#5F5E5A">Veeva Vault (clinical trials)</text>
+<text x="995" y="1797" text-anchor="middle" class="micro" fill="#5F5E5A">Practo / Portea (telemedicine)</text>
+<text x="995" y="1810" text-anchor="middle" class="micro" fill="#5F5E5A">Data processor agreements (DPA)</text>
+<text x="995" y="1823" text-anchor="middle" class="micro" fill="#5F5E5A">Shared responsibility model</text>
+
+<rect x="1140" y="1698" width="250" height="140" rx="6" class="node-cloud"/>
+<text x="1265" y="1716" text-anchor="middle" class="bold11" fill="#444441">Data localisation (DPDP)</text>
+<text x="1265" y="1732" text-anchor="middle" class="micro" fill="#5F5E5A">DPDP §16 — cross-border rules</text>
+<text x="1265" y="1745" text-anchor="middle" class="micro" fill="#5F5E5A">Health data: India storage mandatory</text>
+<text x="1265" y="1758" text-anchor="middle" class="micro" fill="#5F5E5A">Govt can notify exemptions</text>
+<text x="1265" y="1771" text-anchor="middle" class="micro" fill="#5F5E5A">GDPR SCCs for EU transfers</text>
+<text x="1265" y="1784" text-anchor="middle" class="micro" fill="#5F5E5A">HIPAA: US data primarily</text>
+<text x="1265" y="1797" text-anchor="middle" class="micro" fill="#5F5E5A">RBI: payment data in India only</text>
+<text x="1265" y="1810" text-anchor="middle" class="micro" fill="#5F5E5A">AWS S3 bucket region lock</text>
+<text x="1265" y="1823" text-anchor="middle" class="micro" fill="#5F5E5A">Sovereignty controls — GovCloud</text>
+
+<rect x="1410" y="1698" width="250" height="140" rx="6" class="node-cloud"/>
+<text x="1535" y="1716" text-anchor="middle" class="bold11" fill="#444441">Cloud security controls</text>
+<text x="1535" y="1732" text-anchor="middle" class="micro" fill="#5F5E5A">Zero Trust Network Access (ZTNA)</text>
+<text x="1535" y="1745" text-anchor="middle" class="micro" fill="#5F5E5A">mTLS service-to-service auth</text>
+<text x="1535" y="1758" text-anchor="middle" class="micro" fill="#5F5E5A">SIEM — Azure Sentinel / Splunk</text>
+<text x="1535" y="1771" text-anchor="middle" class="micro" fill="#5F5E5A">WAF + DDoS protection</text>
+<text x="1535" y="1784" text-anchor="middle" class="micro" fill="#5F5E5A">Secrets Manager — no hardcoded keys</text>
+<text x="1535" y="1797" text-anchor="middle" class="micro" fill="#5F5E5A">IAM least privilege</text>
+<text x="1535" y="1810" text-anchor="middle" class="micro" fill="#5F5E5A">Vulnerability scan — weekly</text>
+<text x="1535" y="1823" text-anchor="middle" class="micro" fill="#5F5E5A">Penetration test — annual</text>
+
+<!-- Cloud flow connectors -->
+<line x1="310" y1="1768" x2="328" y2="1768" stroke="#5F5E5A" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arr)"/>
+<line x1="580" y1="1768" x2="598" y2="1768" stroke="#5F5E5A" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arr)"/>
+<line x1="850" y1="1768" x2="868" y2="1768" stroke="#5F5E5A" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arr)"/>
+<line x1="1120" y1="1768" x2="1138" y2="1768" stroke="#5F5E5A" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arr)"/>
+<line x1="1390" y1="1768" x2="1408" y2="1768" stroke="#5F5E5A" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arr)"/>
+
+<!-- ============================================================
+     PHASE 9: DATA EXTRACTION, SECONDARY USE & ANALYTICS
+     ============================================================ -->
+<rect x="40" y="1854" width="1620" height="24" rx="4" fill="#185FA5"/>
+<text x="860" y="1870" text-anchor="middle" font-size="11" font-weight="500" fill="#E6F1FB">PHASE 9 — DATA EXTRACTION, SECONDARY USE &amp; ANALYTICS (all institutions)</text>
+
+<rect x="60" y="1890" width="230" height="120" rx="6" class="node-insurance"/>
+<text x="175" y="1910" text-anchor="middle" class="bold11" fill="#0C447C">Population analytics</text>
+<text x="175" y="1926" text-anchor="middle" class="micro" fill="#185FA5">ICMR National NCD registry</text>
+<text x="175" y="1939" text-anchor="middle" class="micro" fill="#185FA5">Disease burden mapping</text>
+<text x="175" y="1952" text-anchor="middle" class="micro" fill="#185FA5">State health dashboards</text>
+<text x="175" y="1965" text-anchor="middle" class="micro" fill="#185FA5">Anonymised aggregate only</text>
+<text x="175" y="1978" text-anchor="middle" class="micro" fill="#185FA5">HMIS / DHIS2 reporting</text>
+<text x="175" y="1991" text-anchor="middle" class="micro" fill="#185FA5">Permitted: DPDP Schedule</text>
+
+<rect x="310" y="1890" width="230" height="120" rx="6" class="node-research"/>
+<text x="425" y="1910" text-anchor="middle" class="bold11" fill="#633806">AI diagnostic tools</text>
+<text x="425" y="1926" text-anchor="middle" class="micro" fill="#854F0B">Trained on de-id imaging data</text>
+<text x="425" y="1939" text-anchor="middle" class="micro" fill="#854F0B">FDA 510(k) / CDSCO approval</text>
+<text x="425" y="1952" text-anchor="middle" class="micro" fill="#854F0B">Deployed in hospital EMR</text>
+<text x="425" y="1965" text-anchor="middle" class="micro" fill="#854F0B">Model outputs stored as PHI</text>
+<text x="425" y="1978" text-anchor="middle" class="micro" fill="#854F0B">Explainability audit trail</text>
+<text x="425" y="1991" text-anchor="middle" class="micro" fill="#854F0B">MEITY AI Guidelines 2024</text>
+
+<rect x="560" y="1890" width="230" height="120" rx="6" class="node-cloud"/>
+<text x="675" y="1910" text-anchor="middle" class="bold11" fill="#444441">Adtech / pixel tracking</text>
+<text x="675" y="1926" text-anchor="middle" class="micro" fill="#5F5E5A">Google Analytics on hospital sites</text>
+<text x="675" y="1939" text-anchor="middle" class="micro" fill="#5F5E5A">Meta pixel on pharmacy apps</text>
+<text x="675" y="1952" text-anchor="middle" class="micro" fill="#5F5E5A">Infers health conditions</text>
+<text x="675" y="1965" text-anchor="middle" class="micro" fill="#5F5E5A">FTC action (US) 2023 precedent</text>
+<text x="675" y="1978" text-anchor="middle" class="micro" fill="#5F5E5A">DPDP violation — no consent</text>
+<text x="675" y="1991" text-anchor="middle" class="micro" fill="#5F5E5A">Must be blocked or consented</text>
+
+<rect x="810" y="1890" width="230" height="120" rx="6" class="node-research"/>
+<text x="925" y="1910" text-anchor="middle" class="bold11" fill="#633806">Real World Evidence (RWE)</text>
+<text x="925" y="1926" text-anchor="middle" class="micro" fill="#854F0B">IQVIA / SYMPHONY datasets</text>
+<text x="925" y="1939" text-anchor="middle" class="micro" fill="#854F0B">Anonymised Rx + claims + labs</text>
+<text x="925" y="1952" text-anchor="middle" class="micro" fill="#854F0B">Sold to pharma for drug approval</text>
+<text x="925" y="1965" text-anchor="middle" class="micro" fill="#854F0B">CDSCO RWE guidance 2022</text>
+<text x="925" y="1978" text-anchor="middle" class="micro" fill="#854F0B">Re-id risk from small cohorts</text>
+<text x="925" y="1991" text-anchor="middle" class="micro" fill="#854F0B">Data broker: commercial risk</text>
+
+<rect x="1060" y="1890" width="230" height="120" rx="6" class="node-pharma"/>
+<text x="1175" y="1910" text-anchor="middle" class="bold11" fill="#72243E">Marketing &amp; CRM use</text>
+<text x="1175" y="1926" text-anchor="middle" class="micro" fill="#993556">Doctor prescribing analytics</text>
+<text x="1175" y="1939" text-anchor="middle" class="micro" fill="#993556">Patient adherence monitoring</text>
+<text x="1175" y="1952" text-anchor="middle" class="micro" fill="#993556">Chronic condition targeting</text>
+<text x="1175" y="1965" text-anchor="middle" class="micro" fill="#993556">DPDP §5 — purpose mismatch</text>
+<text x="1175" y="1978" text-anchor="middle" class="micro" fill="#993556">Consent required for mktg</text>
+<text x="1175" y="1991" text-anchor="middle" class="micro" fill="#993556">GDPR — legitimate interest check</text>
+
+<rect x="1310" y="1890" width="230" height="120" rx="6" class="node-hospital"/>
+<text x="1425" y="1910" text-anchor="middle" class="bold11" fill="#3C3489">Govt &amp; regulatory reporting</text>
+<text x="1425" y="1926" text-anchor="middle" class="micro" fill="#534AB7">PCPNDT — gender screening data</text>
+<text x="1425" y="1939" text-anchor="middle" class="micro" fill="#534AB7">Notifiable disease (NCD portal)</text>
+<text x="1425" y="1952" text-anchor="middle" class="micro" fill="#534AB7">PMJAY data to NHA</text>
+<text x="1425" y="1965" text-anchor="middle" class="micro" fill="#534AB7">Cancer registry (NCRP)</text>
+<text x="1425" y="1978" text-anchor="middle" class="micro" fill="#534AB7">CDSCO ADR / vigilance report</text>
+<text x="1425" y="1991" text-anchor="middle" class="micro" fill="#534AB7">DPDP §17 — State exemption</text>
+
+<rect x="1560" y="1890" width="100" height="120" rx="6" class="node-breach"/>
+<text x="1610" y="1914" text-anchor="middle" class="bold10" fill="#501313">⚠ Extract risks</text>
+<text x="1610" y="1930" text-anchor="middle" class="micro" fill="#791F1F">Data broker</text>
+<text x="1610" y="1943" text-anchor="middle" class="micro" fill="#791F1F">Re-id attack</text>
+<text x="1610" y="1956" text-anchor="middle" class="micro" fill="#791F1F">Scope creep</text>
+<text x="1610" y="1969" text-anchor="middle" class="micro" fill="#791F1F">AI model leak</text>
+<text x="1610" y="1982" text-anchor="middle" class="micro" fill="#791F1F">Pixel tracking</text>
+<text x="1610" y="1995" text-anchor="middle" class="micro" fill="#791F1F">Insider threat</text>
+
+<!-- ============================================================
+     PHASE 10: DATA ARCHIVAL, DEATH & DESTRUCTION
+     ============================================================ -->
+<rect x="40" y="2026" width="1620" height="24" rx="4" fill="#2C2C2A"/>
+<text x="860" y="2042" text-anchor="middle" font-size="11" font-weight="500" fill="#D3D1C7">PHASE 10 — DATA ARCHIVAL, RETENTION, ERASURE &amp; DESTRUCTION (End of lifecycle)</text>
+
+<rect x="60" y="2062" width="250" height="120" rx="6" class="node-hospital"/>
+<text x="185" y="2082" text-anchor="middle" class="bold11" fill="#3C3489">Retention schedules</text>
+<text x="185" y="2098" text-anchor="middle" class="micro" fill="#534AB7">Hospital EMR: 3yr min (MoHFW)</text>
+<text x="185" y="2111" text-anchor="middle" class="micro" fill="#534AB7">Mental health: 5yr (MHA 2017)</text>
+<text x="185" y="2124" text-anchor="middle" class="micro" fill="#534AB7">Minor patients: till 18+3yrs</text>
+<text x="185" y="2137" text-anchor="middle" class="micro" fill="#534AB7">Insurance claims: 7yr (IRDAI)</text>
+<text x="185" y="2138" text-anchor="middle" class="micro" fill="#534AB7">Labs: physical 5yr / digital 7yr</text>
+<text x="185" y="2163" text-anchor="middle" class="micro" fill="#534AB7">Clinical trial: 15yr (ICH E6)</text>
+
+<rect x="330" y="2062" width="250" height="120" rx="6" class="node-lab"/>
+<text x="455" y="2082" text-anchor="middle" class="bold11" fill="#085041">Archival &amp; cold storage</text>
+<text x="455" y="2098" text-anchor="middle" class="micro" fill="#0F6E56">Tiered storage (hot→warm→cold)</text>
+<text x="455" y="2111" text-anchor="middle" class="micro" fill="#0F6E56">AWS S3 Glacier / Azure Archive</text>
+<text x="455" y="2124" text-anchor="middle" class="micro" fill="#0F6E56">Immutable WORM storage</text>
+<text x="455" y="2137" text-anchor="middle" class="micro" fill="#0F6E56">Encryption key rotation annual</text>
+<text x="455" y="2150" text-anchor="middle" class="micro" fill="#0F6E56">Access audit log retained</text>
+<text x="455" y="2163" text-anchor="middle" class="micro" fill="#0F6E56">Backup test — quarterly</text>
+
+<rect x="600" y="2062" width="250" height="120" rx="6" class="node-consent"/>
+<text x="725" y="2082" text-anchor="middle" class="bold11" fill="#4A1B0C">Erasure (Right to be forgotten)</text>
+<text x="725" y="2098" text-anchor="middle" class="micro" fill="#993C1D">DPDP §13 — right to erasure</text>
+<text x="725" y="2111" text-anchor="middle" class="micro" fill="#993C1D">GDPR Art.17 — applies if EU citizen</text>
+<text x="725" y="2124" text-anchor="middle" class="micro" fill="#993C1D">Legal hold overrides erasure</text>
+<text x="725" y="2137" text-anchor="middle" class="micro" fill="#993C1D">Research data: anonymise, not delete</text>
+<text x="725" y="2150" text-anchor="middle" class="micro" fill="#993C1D">Backup purge required too</text>
+<text x="725" y="2163" text-anchor="middle" class="micro" fill="#993C1D">Certificate of destruction issued</text>
+
+<rect x="870" y="2062" width="250" height="120" rx="6" class="node-death"/>
+<text x="995" y="2082" text-anchor="middle" class="bold11" fill="#D3D1C7">Data destruction methods</text>
+<text x="995" y="2098" text-anchor="middle" class="micro" fill="#B4B2A9">Cryptographic erasure (key delete)</text>
+<text x="995" y="2111" text-anchor="middle" class="micro" fill="#B4B2A9">DoD 5220.22-M overwrite (HDD)</text>
+<text x="995" y="2124" text-anchor="middle" class="micro" fill="#B4B2A9">Physical shredding (paper / SSD)</text>
+<text x="995" y="2137" text-anchor="middle" class="micro" fill="#B4B2A9">Degaussing (magnetic media)</text>
+<text x="995" y="2150" text-anchor="middle" class="micro" fill="#B4B2A9">Cloud: vendor-certified wipe</text>
+<text x="995" y="2163" text-anchor="middle" class="micro" fill="#B4B2A9">NIST SP 800-88 standard</text>
+
+<rect x="1140" y="2062" width="250" height="120" rx="6" class="node-death"/>
+<text x="1265" y="2082" text-anchor="middle" class="bold11" fill="#D3D1C7">What data never dies</text>
+<text x="1265" y="2098" text-anchor="middle" class="micro" fill="#B4B2A9">Genomic / DNA — permanent risk</text>
+<text x="1265" y="2111" text-anchor="middle" class="micro" fill="#B4B2A9">Audit logs (immutable by law)</text>
+<text x="1265" y="2124" text-anchor="middle" class="micro" fill="#B4B2A9">Regulatory filings (CDSCO/IRDAI)</text>
+<text x="1265" y="2137" text-anchor="middle" class="micro" fill="#B4B2A9">Court-ordered records</text>
+<text x="1265" y="2150" text-anchor="middle" class="micro" fill="#B4B2A9">Research publications (anon.)</text>
+<text x="1265" y="2163" text-anchor="middle" class="micro" fill="#B4B2A9">Epidemiological aggregate data</text>
+
+<rect x="1410" y="2062" width="250" height="120" rx="6" class="node-breach"/>
+<text x="1535" y="2082" text-anchor="middle" class="bold10" fill="#501313">⚠ End-of-life risks</text>
+<text x="1535" y="2098" text-anchor="middle" class="micro" fill="#791F1F">Decommissioned server — not wiped</text>
+<text x="1535" y="2111" text-anchor="middle" class="micro" fill="#791F1F">Backup tape not destroyed</text>
+<text x="1535" y="2124" text-anchor="middle" class="micro" fill="#791F1F">Log retention beyond legal max</text>
+<text x="1535" y="2137" text-anchor="middle" class="micro" fill="#791F1F">Orphaned cloud storage buckets</text>
+<text x="1535" y="2150" text-anchor="middle" class="micro" fill="#791F1F">Genomic data — re-id forever</text>
+<text x="1535" y="2163" text-anchor="middle" class="micro" fill="#791F1F">Shadow IT copies undiscovered</text>
+
+<line x1="310" y1="2122" x2="328" y2="2122" stroke="#888780" stroke-width="1" marker-end="url(#arr-gray)"/>
+<line x1="580" y1="2122" x2="598" y2="2122" stroke="#888780" stroke-width="1" marker-end="url(#arr-gray)"/>
+<line x1="850" y1="2122" x2="868" y2="2122" stroke="#888780" stroke-width="1" marker-end="url(#arr-gray)"/>
+<line x1="1120" y1="2122" x2="1138" y2="2122" stroke="#888780" stroke-width="1" marker-end="url(#arr-gray)"/>
+<line x1="1390" y1="2122" x2="1408" y2="2122" stroke="#E24B4A" stroke-width="1" marker-end="url(#arr-red)"/>
+
+<!-- ============================================================
+     PHASE 11: PATIENT RIGHTS & GOVERNANCE FRAMEWORK
+     ============================================================ -->
+<rect x="40" y="2198" width="1620" height="24" rx="4" fill="#534AB7"/>
+<text x="860" y="2214" text-anchor="middle" font-size="11" font-weight="500" fill="#EEEDFE">PHASE 11 — PATIENT RIGHTS &amp; GOVERNANCE FRAMEWORK (DPDP 2023 · HIPAA · GDPR)</text>
+
+<!-- Patient rights -->
+<rect x="60" y="2234" width="200" height="150" rx="6" class="node-patient"/>
+<text x="160" y="2254" text-anchor="middle" class="bold11" fill="#501313">Rights (DPDP)</text>
+<text x="160" y="2270" text-anchor="middle" class="micro" fill="#791F1F">§11 — Access to own data</text>
+<text x="160" y="2283" text-anchor="middle" class="micro" fill="#791F1F">§12 — Correction / update</text>
+<text x="160" y="2296" text-anchor="middle" class="micro" fill="#791F1F">§13 — Erasure request</text>
+<text x="160" y="2309" text-anchor="middle" class="micro" fill="#791F1F">§14 — Grievance redressal</text>
+<text x="160" y="2322" text-anchor="middle" class="micro" fill="#791F1F">§16 — Nominee rights (death)</text>
+<text x="160" y="2335" text-anchor="middle" class="micro" fill="#791F1F">§6 — Consent withdrawal</text>
+<text x="160" y="2348" text-anchor="middle" class="micro" fill="#791F1F">DPDP Board appeal (§30)</text>
+<text x="160" y="2361" text-anchor="middle" class="micro" fill="#791F1F">No discriminatory denial of care</text>
+<text x="160" y="2374" text-anchor="middle" class="micro" fill="#791F1F">Right to data portability (FHIR)</text>
+
+<rect x="280" y="2234" width="200" height="150" rx="6" class="node-hospital"/>
+<text x="380" y="2254" text-anchor="middle" class="bold11" fill="#3C3489">Fiduciary duties</text>
+<text x="380" y="2270" text-anchor="middle" class="micro" fill="#534AB7">§8 — Accuracy obligation</text>
+<text x="380" y="2283" text-anchor="middle" class="micro" fill="#534AB7">§9 — Retention limit</text>
+<text x="380" y="2296" text-anchor="middle" class="micro" fill="#534AB7">§10 — Children's data protection</text>
+<text x="380" y="2309" text-anchor="middle" class="micro" fill="#534AB7">§11 — Access response: 30 days</text>
+<text x="380" y="2322" text-anchor="middle" class="micro" fill="#534AB7">§14 — Grievance officer appt.</text>
+<text x="380" y="2335" text-anchor="middle" class="micro" fill="#534AB7">§8(6) — Breach notification</text>
+<text x="380" y="2348" text-anchor="middle" class="micro" fill="#534AB7">DPO required (large hospitals)</text>
+<text x="380" y="2361" text-anchor="middle" class="micro" fill="#534AB7">DPIA for new processing (§33)</text>
+<text x="380" y="2374" text-anchor="middle" class="micro" fill="#534AB7">Significant fiduciary — CERT-In</text>
+
+<rect x="500" y="2234" width="200" height="150" rx="6" class="node-lab"/>
+<text x="600" y="2254" text-anchor="middle" class="bold11" fill="#085041">Enforcement body</text>
+<text x="600" y="2270" text-anchor="middle" class="micro" fill="#0F6E56">DPDP Board — adjudicate</text>
+<text x="600" y="2283" text-anchor="middle" class="micro" fill="#0F6E56">CERT-In — cyber breach</text>
+<text x="600" y="2296" text-anchor="middle" class="micro" fill="#0F6E56">MoHFW — health data policy</text>
+<text x="600" y="2309" text-anchor="middle" class="micro" fill="#0F6E56">IRDAI — insurer data</text>
+<text x="600" y="2322" text-anchor="middle" class="micro" fill="#0F6E56">CDSCO — drug/trial data</text>
+<text x="600" y="2335" text-anchor="middle" class="micro" fill="#0F6E56">TRAI — telecom health data</text>
+<text x="600" y="2348" text-anchor="middle" class="micro" fill="#0F6E56">NHA — ABDM governance</text>
+<text x="600" y="2361" text-anchor="middle" class="micro" fill="#0F6E56">State data protection authority</text>
+<text x="600" y="2374" text-anchor="middle" class="micro" fill="#0F6E56">High Court / Supreme Court writ</text>
+
+<rect x="720" y="2234" width="200" height="150" rx="6" class="node-research"/>
+<text x="820" y="2254" text-anchor="middle" class="bold11" fill="#633806">Penalties (DPDP)</text>
+<text x="820" y="2270" text-anchor="middle" class="micro" fill="#854F0B">§33 — Breach: up to ₹250 Cr</text>
+<text x="820" y="2283" text-anchor="middle" class="micro" fill="#854F0B">Non-compliance: up to ₹200 Cr</text>
+<text x="820" y="2296" text-anchor="middle" class="micro" fill="#854F0B">Children data breach: ₹200 Cr</text>
+<text x="820" y="2309" text-anchor="middle" class="micro" fill="#854F0B">GDPR: 4% global turnover</text>
+<text x="820" y="2322" text-anchor="middle" class="micro" fill="#854F0B">HIPAA: up to $1.9M per category</text>
+<text x="820" y="2335" text-anchor="middle" class="micro" fill="#854F0B">IRDAI: licence cancellation</text>
+<text x="820" y="2348" text-anchor="middle" class="micro" fill="#854F0B">IT Act §72A — data betrayal</text>
+<text x="820" y="2361" text-anchor="middle" class="micro" fill="#854F0B">Criminal liability possible</text>
+<text x="820" y="2374" text-anchor="middle" class="micro" fill="#854F0B">Mandatory breach notification</text>
+
+<rect x="940" y="2234" width="200" height="150" rx="6" class="node-cloud"/>
+<text x="1040" y="2254" text-anchor="middle" class="bold11" fill="#444441">Technical standards</text>
+<text x="1040" y="2270" text-anchor="middle" class="micro" fill="#5F5E5A">ISO 27001 — ISMS</text>
+<text x="1040" y="2283" text-anchor="middle" class="micro" fill="#5F5E5A">ISO 27799 — health info sec</text>
+<text x="1040" y="2296" text-anchor="middle" class="micro" fill="#5F5E5A">NIST CSF 2.0</text>
+<text x="1040" y="2309" text-anchor="middle" class="micro" fill="#5F5E5A">HL7 FHIR R4 / SMART on FHIR</text>
+<text x="1040" y="2322" text-anchor="middle" class="micro" fill="#5F5E5A">DICOM 3.0 — imaging standard</text>
+<text x="1040" y="2335" text-anchor="middle" class="micro" fill="#5F5E5A">IEC 62443 — medical device</text>
+<text x="1040" y="2348" text-anchor="middle" class="micro" fill="#5F5E5A">CERT-In guidelines 2022</text>
+<text x="1040" y="2361" text-anchor="middle" class="micro" fill="#5F5E5A">MoHFW EHR Standards 2016</text>
+<text x="1040" y="2374" text-anchor="middle" class="micro" fill="#5F5E5A">NABL accreditation (labs)</text>
+
+<rect x="1160" y="2234" width="200" height="150" rx="6" class="node-consent"/>
+<text x="1260" y="2254" text-anchor="middle" class="bold11" fill="#4A1B0C">Cross-border regime</text>
+<text x="1260" y="2270" text-anchor="middle" class="micro" fill="#993C1D">DPDP §16 — notified countries</text>
+<text x="1260" y="2283" text-anchor="middle" class="micro" fill="#993C1D">GDPR adequacy (if EU patients)</text>
+<text x="1260" y="2296" text-anchor="middle" class="micro" fill="#993C1D">SCCs — data transfer agreement</text>
+<text x="1260" y="2309" text-anchor="middle" class="micro" fill="#993C1D">HIPAA BAA — US processor</text>
+<text x="1260" y="2322" text-anchor="middle" class="micro" fill="#993C1D">APEC CBPR — Asia transfers</text>
+<text x="1260" y="2335" text-anchor="middle" class="micro" fill="#993C1D">Health data: India-first rule</text>
+<text x="1260" y="2348" text-anchor="middle" class="micro" fill="#993C1D">Sovereign data trust (proposed)</text>
+<text x="1260" y="2361" text-anchor="middle" class="micro" fill="#993C1D">Reinsurer share: adequacy req.</text>
+<text x="1260" y="2374" text-anchor="middle" class="micro" fill="#993C1D">MoHFW clearance for export</text>
+
+<rect x="1380" y="2234" width="280" height="150" rx="6" fill="#FCEBEB" fill-opacity="0.6" stroke="#A32D2D" stroke-width="0.8"/>
+<text x="1520" y="2254" text-anchor="middle" class="bold11" fill="#501313">Critical governance gaps (India 2025)</text>
+<text x="1520" y="2270" text-anchor="middle" class="micro" fill="#791F1F">DPDP Rules not yet published (pending 2025)</text>
+<text x="1520" y="2283" text-anchor="middle" class="micro" fill="#791F1F">No sector-specific health data law yet</text>
+<text x="1520" y="2296" text-anchor="middle" class="micro" fill="#791F1F">DPDP Board not yet constituted</text>
+<text x="1520" y="2309" text-anchor="middle" class="micro" fill="#791F1F">MoHFW EHR standards 2016 — outdated</text>
+<text x="1520" y="2322" text-anchor="middle" class="micro" fill="#791F1F">No genomic data regulation yet</text>
+<text x="1520" y="2335" text-anchor="middle" class="micro" fill="#791F1F">E-pharmacy rules still pending</text>
+<text x="1520" y="2348" text-anchor="middle" class="micro" fill="#791F1F">AI in diagnostics — no framework</text>
+<text x="1520" y="2361" text-anchor="middle" class="micro" fill="#791F1F">ABDM non-mandatory — low adoption</text>
+<text x="1520" y="2374" text-anchor="middle" class="micro" fill="#791F1F">Wearable data — no coverage</text>
+
+<!-- ============================================================
+     FOOTER
+     ============================================================ -->
+<rect x="40" y="2400" width="1620" height="50" rx="6" fill="#F1EFE8" fill-opacity="0.5" stroke="#B4B2A9" stroke-width="0.5"/>
+<text x="860" y="2420" text-anchor="middle" font-size="10" fill="#5F5E5A">This map covers: Hospital · Diagnostic Lab · Insurance · Pharmacy · Medical Research · Cloud/SaaS — India governance context (DPDP 2023 · IT Act 2000 · MoHFW Standards · ICMR Guidelines · IRDAI Circulars · CDSCO Rules)</text>
+<text x="860" y="2438" text-anchor="middle" font-size="10" fill="#5F5E5A">Cross-framework: GDPR EU (Art.9 special category) · HIPAA (45 CFR Parts 160/164) · ISO 27799 · HL7 FHIR R4 · ABDM / ABHA | Prepared for: India Healthcare Data Governance Framework Research | For governance use only — not legal advice</text>
+
+<!-- Inter-phase vertical connectors -->
+<!-- Hospital → ABHA -->
+<line x1="860" y1="756" x2="860" y2="808" stroke="#3B6D11" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arr)"/>
+<!-- Hospital → Lab -->
+<line x1="485" y1="918" x2="485" y2="970" stroke="#0F6E56" stroke-width="1" marker-end="url(#arr)"/>
+<!-- Hospital → Insurance -->
+<line x1="700" y1="918" x2="700" y2="1100" stroke="#185FA5" stroke-width="0.8" stroke-dasharray="3,3" marker-end="url(#arr-blue)"/>
+<!-- Hospital → Pharmacy -->
+<line x1="400" y1="918" x2="400" y2="1282" stroke="#993556" stroke-width="0.8" stroke-dasharray="3,3" marker-end="url(#arr)"/>
+<!-- Hospital → Research -->
+<line x1="970" y1="1100" x2="970" y2="1464" stroke="#854F0B" stroke-width="0.8" stroke-dasharray="3,3" marker-end="url(#arr)"/>
+<!-- All → Cloud -->
+<line x1="860" y1="1646" x2="860" y2="1698" stroke="#5F5E5A" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arr)"/>
+</svg>
+</div>
+</body>
+</html>
